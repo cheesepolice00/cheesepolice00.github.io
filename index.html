@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CHEESE 경찰청 통합 기록지 - RP 실적 및 벌금 관리 시스템">
   <title>CHEESE 경찰청 통합 기록지</title>
   <style>
     :root {
@@ -74,6 +75,16 @@
     .notice-btn { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; text-align: center; background: var(--input-bg); transition: 0.2s; }
     .notice-btn.selected { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
 
+    .stats-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .stats-table th, .stats-table td { padding: 12px; text-align: center; border-bottom: 1px solid var(--border-color); }
+    .stats-table th { background: var(--input-bg); font-weight: bold; color: var(--text-main); position: sticky; top: 0; }
+    .stats-table tr:hover { background: rgba(52, 152, 219, 0.05); }
+    .stats-table td { color: var(--text-main); }
+    .week-selector { display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 20px; padding: 15px; background: var(--input-bg); border-radius: 12px; }
+    .week-selector button { padding: 10px 20px; border: none; border-radius: 8px; background: var(--accent-blue); color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .week-selector button:hover { opacity: 0.8; }
+    .week-display { font-weight: bold; font-size: 16px; color: var(--text-main); }
+
     @media (max-width: 1000px) { .page-section { padding-left: 20px; } .commute-panel { position: static; width: auto; margin-bottom: 20px; } .result-content { flex-direction: column; gap: 15px; } .sticky-result-bar { padding: 20px; } }
   </style>
 </head>
@@ -84,6 +95,7 @@
       <button class="nav-btn active" onclick="switchPage('page-record', this)">📝 RP 실적</button>
       <button class="nav-btn" onclick="switchPage('page-calc', this)">⚖️ 벌금 계산기</button>
       <button class="nav-btn" onclick="switchPage('page-notice', this)">📢 사이드 공지</button>
+      <button class="nav-btn" onclick="checkAdminAccess(this)">📊 관리</button>
     </div>
     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
   </nav>
@@ -248,6 +260,33 @@
       </div>
       <textarea id="notice-preview" style="height: 350px; text-align: left; padding: 20px; line-height: 1.6; margin-top:20px; font-weight: bold; font-family: 'Pretendard', sans-serif;"></textarea>
       <button class="submit-btn" style="background: var(--accent-blue);" onclick="copyNotice()">📋 복사하기</button>
+    </div>
+  </div>
+
+  <div id="page-admin" class="page-section">
+    <div class="container-box" style="max-width: 900px;">
+      <h2>📊 주간 실적 관리</h2>
+      <div class="week-selector">
+        <button onclick="changeWeek(-1)">◀ 이전 주</button>
+        <span class="week-display" id="week-display">로딩 중...</span>
+        <button onclick="changeWeek(1)">다음 주 ▶</button>
+      </div>
+      <div id="loading-message" style="text-align: center; padding: 40px; color: var(--text-sub);">데이터를 불러오는 중...</div>
+      <div id="stats-container" style="display: none; overflow-x: auto;">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>고유번호</th>
+              <th>이름</th>
+              <th>총 근무시간</th>
+              <th>RP승리</th>
+              <th>총 RP횟수</th>
+              <th>총 벌금 부과액</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -468,12 +507,35 @@
         }
     }
 
+    function checkAdminAccess(btn) {
+        const isAuthenticated = sessionStorage.getItem('adminAuth') === 'true';
+        
+        if(isAuthenticated) {
+            switchPage('page-admin', btn);
+            return;
+        }
+        
+        const password = prompt('관리 페이지 비밀번호를 입력하세요:');
+        
+        if(password === '15411541') {
+            sessionStorage.setItem('adminAuth', 'true');
+            switchPage('page-admin', btn);
+        } else if(password !== null) {
+            alert('❌ 비밀번호가 올바르지 않습니다.');
+        }
+    }
+
     function switchPage(id, btn) {
         document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('calc-sticky-bar').style.display = (id === 'page-calc' ? 'flex' : 'none');
+        
+        // 관리 페이지 접근 시 데이터 로드
+        if(id === 'page-admin' && !weeklyData) {
+          loadWeeklyStats();
+        }
     }
 
     function updateSelectedItemsDisplay() {
@@ -738,6 +800,153 @@
       }
     }
     
+    let currentWeekOffset = 0;
+    let weeklyData = null;
+
+    function getWeekRange(offset = 0) {
+      const now = new Date();
+      const day = now.getDay();
+      const diff = (day === 0 ? -6 : 1) - day;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diff + (offset * 7));
+      monday.setHours(0, 0, 0, 0);
+      
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      
+      return { monday, sunday };
+    }
+
+    function formatDate(date) {
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    async function loadWeeklyStats() {
+      try {
+        document.getElementById('loading-message').style.display = 'block';
+        document.getElementById('stats-container').style.display = 'none';
+        
+        // 로컬 테스트용: CORS 오류 발생 시 샘플 데이터 사용
+        try {
+          const response = await fetch(SCRIPT_URL + '?type=weeklyStats');
+          if (!response.ok) throw new Error('Network response was not ok');
+          const data = await response.json();
+          weeklyData = data;
+        } catch(fetchError) {
+          console.warn('주간 통계 로드 실패 (CORS). 로컬 테스트 모드로 전환합니다.', fetchError);
+          // 로컬 테스트용 샘플 데이터
+          weeklyData = {
+            commute: [
+              ['고유번호', '이름', '출근시간', '퇴근시간', '근무시간'],
+              // 샘플 데이터는 실제 배포 시 서버에서 가져옴
+            ],
+            rp: [
+              ['날짜', '고유번호', '이름', 'RP종류', '결과']
+            ],
+            fine: [
+              ['날짜', '범죄자고번', '범죄자이름', '경찰고번', '경찰이름', '죄목', '총벌금', '총구금시간']
+            ]
+          };
+          document.getElementById('loading-message').innerHTML = 
+            '⚠️ 로컬 테스트 모드<br><small style="color: var(--text-sub);">실제 데이터는 배포 후 확인 가능합니다</small>';
+        }
+        
+        displayWeeklyStats();
+      } catch(e) {
+        document.getElementById('loading-message').innerText = '데이터 로딩 실패: ' + e.message;
+      }
+    }
+
+    function displayWeeklyStats() {
+      if(!weeklyData) return;
+      
+      const { monday, sunday } = getWeekRange(currentWeekOffset);
+      document.getElementById('week-display').innerText = `${formatDate(monday)} ~ ${formatDate(sunday)}`;
+      
+      const userStats = {};
+      
+      // 출퇴근 데이터 처리 (총 근무시간)
+      weeklyData.commute.forEach((row, idx) => {
+        if(idx === 0) return; // 헤더
+        const [uid, name, startTime, endTime, duration] = row;
+        if(!uid || !startTime) return;
+        
+        const startDate = new Date(startTime);
+        if(startDate >= monday && startDate <= sunday) {
+          if(!userStats[uid]) userStats[uid] = { uid, name, workTime: 0, rpWin: 0, rpTotal: 0, fine: 0 };
+          
+          // duration이 숫자 형식일 경우 (0~1 사이 값)
+          if(typeof duration === 'number' && duration < 1) {
+            userStats[uid].workTime += duration * 24 * 60; // 시간을 분으로 변환
+          }
+        }
+      });
+      
+      // RP기록 데이터 처리
+      weeklyData.rp.forEach((row, idx) => {
+        if(idx === 0) return;
+        const [date, uid, name, type, result] = row;
+        if(!uid || !date) return;
+        
+        const rpDate = new Date(date);
+        if(rpDate >= monday && rpDate <= sunday) {
+          if(!userStats[uid]) userStats[uid] = { uid, name, workTime: 0, rpWin: 0, rpTotal: 0, fine: 0 };
+          userStats[uid].rpTotal++;
+          if(result === '승리') userStats[uid].rpWin++;
+        }
+      });
+      
+      // 벌금 데이터 처리
+      weeklyData.fine.forEach((row, idx) => {
+        if(idx === 0) return;
+        const [date, suspectUid, suspectName, policeUid, policeName, items, totalFine, totalTime] = row;
+        if(!policeUid || !date) return;
+        
+        const fineDate = new Date(date);
+        if(fineDate >= monday && fineDate <= sunday) {
+          if(!userStats[policeUid]) userStats[policeUid] = { uid: policeUid, name: policeName, workTime: 0, rpWin: 0, rpTotal: 0, fine: 0 };
+          const fineAmount = typeof totalFine === 'string' ? parseInt(totalFine.replace(/[^0-9]/g, '')) : totalFine;
+          userStats[policeUid].fine += fineAmount || 0;
+        }
+      });
+      
+      // 테이블 렌더링
+      const tbody = document.getElementById('stats-tbody');
+      tbody.innerHTML = '';
+      
+      const users = Object.values(userStats).sort((a, b) => b.workTime - a.workTime);
+      
+      if(users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 40px; color: var(--text-sub);">해당 기간에 기록이 없습니다.</td></tr>';
+      } else {
+        users.forEach(user => {
+          const hours = Math.floor(user.workTime / 60);
+          const mins = Math.floor(user.workTime % 60);
+          const workTimeStr = `${hours}시간 ${mins}분`;
+          
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${user.uid}</td>
+            <td>${user.name}</td>
+            <td>${workTimeStr}</td>
+            <td>${user.rpWin}</td>
+            <td>${user.rpTotal}</td>
+            <td>$${user.fine.toLocaleString()}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+      
+      document.getElementById('loading-message').style.display = 'none';
+      document.getElementById('stats-container').style.display = 'block';
+    }
+
+    function changeWeek(offset) {
+      currentWeekOffset += offset;
+      displayWeeklyStats();
+    }
+
     window.onload = () => {
         const u = localStorage.getItem('myUid') || "", n = localStorage.getItem('myName') || "";
         document.getElementById('c-uid').value = u; document.getElementById('c-name').value = n;
