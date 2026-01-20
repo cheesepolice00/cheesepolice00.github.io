@@ -839,7 +839,6 @@
           weeklyData = {
             commute: [
               ['고유번호', '이름', '출근시간', '퇴근시간', '근무시간'],
-              // 샘플 데이터는 실제 배포 시 서버에서 가져옴
             ],
             rp: [
               ['날짜', '고유번호', '이름', 'RP종류', '결과']
@@ -880,19 +879,29 @@
         const [uid, name, startTime, endTime, durationRaw] = row;
         if(!uid || !startTime) return;
         
+        // UTC 시간을 Date로 파싱하면 자동으로 현지시간으로 변환됨
         const startDate = new Date(startTime);
-        if(startDate >= monday && startDate <= sunday) {
+        // 비교를 위해 시간 정보 제거 (날짜만 비교)
+        const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const mondayOnly = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
+        const sundayOnly = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate());
+        
+        if(startDateOnly >= mondayOnly && startDateOnly <= sundayOnly) {
           if(!userStats[uid]) userStats[uid] = { uid, name, workTime: 0, rpWin: 0, rpTotal: 0, fine: 0 };
 
-          // duration이 숫자(0~1) 또는 24시간 형식 문자열("HH:MM"/"HH:MM:SS")일 때 처리
+          // duration이 숫자(0~1) 또는 HH:MM:SS 형식 문자열일 때 처리
           let seconds = 0;
           if(typeof durationRaw === 'number') {
-            seconds = durationRaw < 1 ? durationRaw * 24 * 60 * 60 : durationRaw * 60; // 소수면 일(day) 단위, 아니면 분 단위로 가정
-          } else if(typeof durationRaw === 'string' && durationRaw.includes(':')) {
-            const parts = durationRaw.split(':').map(Number);
-            if(parts.length >= 2 && parts.every(n => !Number.isNaN(n))) {
-              const [h, m, s = 0] = parts;
+            // 소수(day 단위)면 초로 변환, 정수이면 분 단위로 가정
+            seconds = durationRaw < 1 ? durationRaw * 24 * 60 * 60 : durationRaw * 60;
+          } else if(typeof durationRaw === 'string') {
+            // HH:MM:SS 또는 HH:MM 형식
+            if(durationRaw.match(/^\d{2}:\d{2}:\d{2}$/)) {
+              const [h, m, s] = durationRaw.split(':').map(Number);
               seconds = h * 3600 + m * 60 + s;
+            } else if(durationRaw.match(/^\d{2}:\d{2}$/)) {
+              const [h, m] = durationRaw.split(':').map(Number);
+              seconds = h * 3600 + m * 60;
             }
           }
 
