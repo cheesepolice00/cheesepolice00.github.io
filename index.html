@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>CHEESE 경찰청 통합 기록지</title>
+  <style>
+    :root {
+        --bg-color: #f0f2f5; --container-bg: #ffffff; --text-main: #333333; --text-sub: #666666;
+        --border-color: #e1e4e8; --input-bg: #f8f9fa; --navbar-bg: #2c3e50;
+        --accent-green: #27ae60; --accent-red: #e74c3c; --accent-blue: #3498db;
+    }
+    [data-theme="dark"] {
+        --bg-color: #18191a; --container-bg: #242526; --text-main: #e4e6eb; --text-sub: #b0b3b8;
+        --border-color: #3e4042; --input-bg: #3a3b3c; --navbar-bg: #1c1e21;
+    }
+    body { margin: 0; background-color: var(--bg-color); color: var(--text-main); font-family: 'Pretendard', sans-serif; transition: 0.3s; user-select: none; padding-bottom: 120px; }
+    .navbar { background-color: var(--navbar-bg); padding: 0 20px; height: 60px; position: sticky; top: 0; z-index: 900; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .nav-links { display: flex; gap: 10px; }
+    .nav-btn { background: transparent; color: #bdc3c7; border: none; padding: 10px 18px; font-weight: bold; cursor: pointer; border-radius: 12px; transition: 0.2s; font-size: 15px; }
+    .nav-btn.active { background-color: rgba(255,255,255,0.15); color: #ffffff; }
+    .theme-toggle { position: absolute; right: 20px; background: rgba(255,255,255,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; color: white; transition: 0.3s; }
+    
+    .commute-panel { position: fixed; top: 75px; left: 20px; background: var(--container-bg); padding: 22px; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 800; width: 190px; border: 1px solid var(--border-color); }
+    .commute-panel h4 { margin: 0 0 15px 0; text-align: center; font-size: 15px; color: var(--accent-blue); font-weight: 800; }
+    .commute-input { width: 100%; padding: 14px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-size: 15px; font-weight: bold; text-align: center; box-sizing: border-box; }
+    .commute-btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; color: white; transition: 0.2s; font-size: 16px; margin-top: 5px; }
+    .btn-on { background: var(--accent-green); }
+    .btn-off { background: var(--accent-red); }
+    .btn-reset-all { background: #7f8c8d; font-size: 11px; padding: 10px; margin-top: 20px; opacity: 0.6; }
+
+    .page-section { display: none; padding: 40px 20px 40px 250px; min-height: calc(100vh - 60px); justify-content: center; align-items: flex-start; }
+    .page-section.active { display: flex; }
+    .container-box { background: var(--container-bg); padding: 35px; border-radius: 20px; width: 100%; max-width: 680px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+    h2 { text-align: center; margin: 0 0 30px 0; font-weight: 800; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: bold; color: var(--text-sub); }
+    input, select, textarea { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-size: 16px; text-align: center; box-sizing: border-box; }
+    .submit-btn { width: 100%; padding: 18px; border: none; border-radius: 12px; font-weight: bold; font-size: 17px; cursor: pointer; color: white; background: #333; transition: 0.2s; margin-top: 10px; }
+
+    .tab-menu { display: flex; gap: 8px; margin-bottom: 20px; background: var(--input-bg); padding: 5px; border-radius: 14px; }
+    .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: var(--text-sub); background: transparent; }
+    .tab-btn.tab-active { background: var(--container-bg); color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .calc-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+    .item { display: flex; align-items: center; padding: 14px; background: var(--input-bg); border-radius: 12px; margin-bottom: 8px; cursor: pointer; font-size: 14px; border: 1px solid transparent; }
+    .item:hover { border-color: var(--accent-blue); background: rgba(52, 152, 219, 0.05); }
+    .item input { width: auto; margin-right: 15px; transform: scale(1.4); }
+    .badge { margin-left: auto; font-weight: bold; color: var(--accent-red); font-size: 12px; padding: 4px 8px; background: rgba(231, 76, 60, 0.1); border-radius: 6px; }
+
+    .sticky-result-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--container-bg); border-top: 2px solid var(--border-color); padding: 15px 40px; display: none; justify-content: center; align-items: center; z-index: 1000; box-shadow: 0 -8px 25px rgba(0,0,0,0.1); }
+    .result-content { display: flex; width: 100%; max-width: 1000px; align-items: center; justify-content: space-between; gap: 30px; }
+    .result-info { display: flex; gap: 40px; align-items: center; }
+    .info-box { display: flex; flex-direction: column; }
+    .info-label { font-size: 12px; color: var(--text-sub); font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+    .info-value { font-size: 24px; font-weight: 900; }
+    .info-value.money { color: var(--accent-red); }
+    .bail-group { display: flex; align-items: center; background: var(--input-bg); padding: 10px 15px; border-radius: 12px; border: 2px solid var(--accent-blue); gap: 10px; }
+    .bail-group input { width: 70px; padding: 5px; font-size: 16px; border: none; background: transparent; text-align: right; font-weight: 900; color: var(--accent-blue); }
+    .action-btns { display: flex; gap: 12px; }
+    .mini-btn { padding: 15px 25px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
+    .btn-reset { background: #95a5a6; color: white; }
+    .btn-submit { background: var(--navbar-bg); color: white; min-width: 180px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .mudeo-btn { padding: 10px 15px !important; min-width: auto !important; }
+    .mudeo-btn.mudeo-active { background: var(--accent-green) !important; color: white !important; box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); }
+
+    .radio-group { display: flex; gap: 12px; margin: 10px 0; }
+    .radio-box { flex: 1; padding: 20px; border: 2px solid var(--border-color); border-radius: 14px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.2s; color: var(--text-sub); }
+    .radio-box.active-win { background: #eef9f1; border-color: var(--accent-green); color: var(--accent-green); }
+    .radio-box.active-draw { background: #f0f8ff; border-color: #3498db; color: #3498db; }
+    .radio-box.active-lose { background: #fff5f5; border-color: var(--accent-red); color: var(--accent-red); }
+
+    .notice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .notice-btn { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; text-align: center; background: var(--input-bg); transition: 0.2s; }
+    .notice-btn.selected { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+
+    @media (max-width: 1000px) { .page-section { padding-left: 20px; } .commute-panel { position: static; width: auto; margin-bottom: 20px; } .result-content { flex-direction: column; gap: 15px; } .sticky-result-bar { padding: 20px; } }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="switchPage('page-record', this)">📝 RP 실적</button>
+      <button class="nav-btn" onclick="switchPage('page-calc', this)">⚖️ 벌금 계산기</button>
+      <button class="nav-btn" onclick="switchPage('page-notice', this)">📢 사이드 공지</button>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </nav>
+
+  <div class="commute-panel">
+    <h4>근무 관리</h4>
+    <input type="text" id="c-uid" class="commute-input" placeholder="고유번호" onchange="syncMyInfo()">
+    <input type="text" id="c-name" class="commute-input" placeholder="성함" onchange="syncMyInfo()">
+    <button id="c-btn" class="commute-btn btn-on" onclick="handleCommute()">🏢 출근하기</button>
+    <button id="c-peak-btn" class="commute-btn btn-on" style="margin-top: 5px;" onclick="togglePeakMode()">⚡ 피크 OFF</button>
+    <button class="commute-btn btn-reset-all" onclick="resetAllData()">🔄 전체 초기화</button>
+  </div>
+
+  <div id="page-record" class="page-section active">
+    <div class="container-box">
+      <h2>📊 RP 실적 등록</h2>
+      <div class="form-group">
+        <label>나의 정보</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="r-uid" readonly placeholder="고번">
+          <input type="text" id="r-name" readonly placeholder="이름">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>RP 종류</label>
+        <select id="r-type">
+          <option value="ATM">ATM 강도</option>
+          <option value="편의점">편의점 강도</option>
+          <option value="빈집털이">빈집털이</option>
+          <option value="남부은행">남부은행</option>
+          <option value="보석상">보석상</option>
+          <option value="경찰서 털이1차">경찰서 털이1차</option>
+          <option value="경찰서 털이2차">경찰서 털이2차</option>
+          <option value="도주">도주</option>
+          <option value="즉흥">즉흥</option>
+          <option value="수배">수배</option>
+          <option value="영장">영장</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>결과 선택</label>
+        <div class="radio-group">
+          <div class="radio-box" id="box-win" onclick="setResult('승리')">🏆 승리</div>
+          <div class="radio-box" id="box-draw" onclick="setResult('무승부')">🤝 무승부</div>
+          <div class="radio-box" id="box-lose" onclick="setResult('패배')">❌ 패배</div>
+        </div>
+      </div>
+      <button id="r-submit-btn" class="submit-btn" style="background: #34495e;" onclick="submitRp()">실적 시트에 등록하기</button>
+    </div>
+  </div>
+
+  <div id="page-calc" class="page-section">
+    <div class="container-box">
+      <h2>⚖️ 경찰청 벌금 계산기</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; padding: 20px; background: var(--input-bg); border-radius: 16px;">
+        <input type="text" id="f-sus-uid" placeholder="범죄자 고번">
+        <input type="text" id="f-sus-name" placeholder="범죄자 이름">
+      </div>
+      <div class="tab-menu">
+        <button class="tab-btn tab-active" onclick="openCalcTab(event, 'tab-traffic')">🚦 교통</button>
+        <button class="tab-btn" onclick="openCalcTab(event, 'tab-story')">🔫 스토리</button>
+        <button class="tab-btn" onclick="openCalcTab(event, 'tab-strong')">🕋 공무원</button>
+      </div>
+
+      <div id="tab-traffic" class="calc-list" style="display: block;">
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 신호 위반</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 속도 위반</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 역주행</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 차선 위반</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 중앙선 침범</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 스턴트</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="15000000" data-time="0" onchange="calc()"> 보복 운전</label><span class="badge">$15,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="10000000" data-time="0" onchange="calc()"> 인도 주행</label><span class="badge">$10,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="10000000" data-time="0" onchange="calc()"> 공공기물 파손</label><span class="badge">$10,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="12000000" data-time="0" onchange="calc()"> 불법 유턴</label><span class="badge">$12,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="10000000" data-time="0" onchange="calc()"> 소음 공해</label><span class="badge">$10,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="20" onchange="calc()"> 폭 주</label><span class="badge">$30,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="17000000" data-time="10" onchange="calc()"> 음주 운전</label><span class="badge">$17,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="10000000" data-time="0" onchange="calc()"> 승차 방법 제한</label><span class="badge">$10,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="10000000" data-time="0" onchange="calc()"> 운전중 핸드폰 사용</label><span class="badge">$10,000,000</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="10000000" data-time="0" onchange="calc()"> 비정상 도로 진입</label><span class="badge">$10,000,000</span></div>
+      </div>
+
+      <div id="tab-story" class="calc-list" style="display: none;">
+        <div class="item" onclick="handleStoryClick(this, 'ATM')"><label><input type="checkbox" class="calc-check" data-money="100000000" data-time="10"> ATM</label><span class="badge">$100,000,000 / 10분</span></div>
+        <div class="item" onclick="handleStoryClick(this, '편의점')"><label><input type="checkbox" class="calc-check" data-money="100000000" data-time="15"> 편의점</label><span class="badge">$100,000,000 / 15분</span></div>
+        <div class="item" onclick="handleStoryClick(this, '빈집 털이')"><label><input type="checkbox" class="calc-check" data-money="100000000" data-time="15"> 빈집 털이</label><span class="badge">$100,000,000 / 15분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="150000000" data-time="30" onchange="calc()"> 남부 은행</label><span class="badge">$150,000,000 / 30분</span></div>
+        <div class="item" onclick="handleStoryClick(this, '보석상')"><label><input type="checkbox" class="calc-check" data-money="150000000" data-time="20"> 보석상</label><span class="badge">$150,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="200000000" data-time="30" onchange="calc()"> 경찰서 털이 1차</label><span class="badge">$200,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="200000000" data-time="30" onchange="calc()"> 경찰서 털이 2차</label><span class="badge">$200,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="200000000" data-time="30" onchange="calc()"> 즉흥</label><span class="badge">$200,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="200000000" data-time="30" onchange="calc()"> 영장</label><span class="badge">$200,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="300000000" data-time="30" onchange="calc()"> 수배</label><span class="badge">$300,000,000 / 30분</span></div>
+      </div>
+      <div id="mudeo-panel" style="display: none; margin-top: 20px; padding: 15px; background: var(--input-bg); border-radius: 12px;">
+        <div style="font-weight: bold; margin-bottom: 12px; color: var(--accent-blue);">묻더 선택:</div>
+        <button class="mini-btn mudeo-btn" id="mudeo-btn-1" style="background: var(--accent-blue); color: white; margin-right: 8px; margin-bottom: 8px;" onclick="applyMudeo('mudeo1')">묻더</button>
+        <button class="mini-btn mudeo-btn" id="mudeo-btn-2" style="background: var(--accent-blue); color: white; margin-right: 8px; margin-bottom: 8px;" onclick="applyMudeo('mudeo2')">묻묻더</button>
+        <button class="mini-btn mudeo-btn" id="mudeo-btn-3" style="background: var(--accent-blue); color: white; margin-bottom: 8px;" onclick="applyMudeo('mudeo3')">묻묻묻더</button>
+      </div>
+
+      <div id="tab-strong" class="calc-list" style="display: none;">
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="50000000" data-time="20" onchange="calc()"> 시민 살인</label><span class="badge">$50,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="70000000" data-time="30" onchange="calc()"> 공무원 살인</label><span class="badge">$70,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="20" onchange="calc()"> 시민 살인 미수</label><span class="badge">$30,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="50000000" data-time="30" onchange="calc()"> 공무원 살인 미수</label><span class="badge">$50,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="20000000" data-time="15" onchange="calc()"> 시민 폭행</label><span class="badge">$20,000,000 / 15분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="40000000" data-time="20" onchange="calc()"> 공무원 폭행</label><span class="badge">$40,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="60000000" data-time="25" onchange="calc()"> 공무원 단체 폭행</label><span class="badge">$60,000,000 / 25분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="20000000" data-time="20" onchange="calc()"> 시민 차량 절도</label><span class="badge">$20,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="40000000" data-time="30" onchange="calc()"> 공무원 차량 절도</label><span class="badge">$40,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="10" onchange="calc()"> 공무원 재물 손괴</label><span class="badge">$30,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="60000000" data-time="10" onchange="calc()"> 시민 납치</label><span class="badge">$60,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="30" onchange="calc()"> 불법물품 및 무기 소지</label><span class="badge">$30,000,000 / 30분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="15000000" data-time="10" onchange="calc()"> 횡령 및 사기</label><span class="badge">$15,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="40000000" data-time="25" onchange="calc()"> 공무원 사칭</label><span class="badge">$40,000,000 / 25분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="20000000" data-time="20" onchange="calc()"> 허위사실 유포</label><span class="badge">$20,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="20" onchange="calc()"> 거짓진술</label><span class="badge">$30,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="20000000" data-time="10" onchange="calc()"> 사유지 무단 침입</label><span class="badge">$20,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="20" onchange="calc()"> 공무원 거짓 호출</label><span class="badge">$30,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="10" onchange="calc()"> 집행중 도주</label><span class="badge">$30,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="30000000" data-time="15" onchange="calc()"> 공무집행 방해</label><span class="badge">$30,000,000 / 15분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="40000000" data-time="10" onchange="calc()"> 공무 지시 불이행</label><span class="badge">$40,000,000 / 10분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="70000000" data-time="20" onchange="calc()"> 공무 지시 불이행 도주</label><span class="badge">$70,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="60000000" data-time="40" onchange="calc()"> 공무원 뇌물 수수</label><span class="badge">$60,000,000 / 40분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="40000000" data-time="20" onchange="calc()"> 공무원 명예훼손</label><span class="badge">$40,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="25000000" data-time="20" onchange="calc()"> 증거 인멸</label><span class="badge">$25,000,000 / 20분</span></div>
+        <div class="item"><label><input type="checkbox" class="calc-check" data-money="20000000" data-time="10" onchange="calc()"> 스토킹</label><span class="badge">$20,000,000 / 10분</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="calc-sticky-bar" class="sticky-result-bar">
+    <div class="result-content">
+      <div class="result-info">
+        <div class="info-box"><span class="info-label">총 벌금</span><span class="info-value money">$<span id="disp-money">0</span></span></div>
+        <div class="info-box"><span class="info-label">구금 시간</span><span class="info-value"><span id="disp-time">0</span>분</span></div>
+        <div class="info-box"><span class="info-label">보석금 감면</span><div class="bail-group"><input type="number" id="f-bail-time" value="0" min="0" oninput="onBailInputChange()"><span style="font-size: 14px; font-weight: 900;">분</span></div></div>
+      </div>
+      <div class="action-btns">
+        <button class="mini-btn btn-reset" onclick="resetCalc()">🔄 초기화</button>
+        <button id="submit-fine-btn" class="mini-btn btn-submit" onclick="submitFine()">📊 벌금 시트에 등록</button>
+      </div>
+    </div>
+    <div id="selected-items-display" style="padding: 12px 40px; font-size: 14px; color: var(--text-sub); cursor: pointer; border-top: 1px solid var(--border-color);" onclick="copySelectedItems()">
+      <span style="font-weight: bold; margin-right: 8px;">선택된 죄목:</span>
+      <span id="selected-items-text">없음</span>
+    </div>
+  </div>
+
+  <div id="page-notice" class="page-section">
+    <div class="container-box">
+      <h2>📢 사이드 공지 생성기</h2>
+      <div id="notice-grid" class="notice-grid"></div>
+      <div id="notice-input-section" style="display: none; margin-top: 20px; padding: 15px; background: var(--input-bg); border-radius: 12px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <input type="text" id="notice-uid" placeholder="고유번호" onchange="updateNoticePreview()" style="padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-main); font-size: 14px;">
+          <input type="text" id="notice-name" placeholder="닉네임" onchange="updateNoticePreview()" style="padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--container-bg); color: var(--text-main); font-size: 14px;">
+        </div>
+      </div>
+      <textarea id="notice-preview" style="height: 350px; text-align: left; padding: 20px; line-height: 1.6; margin-top:20px; font-weight: bold; font-family: 'Pretendard', sans-serif;"></textarea>
+      <button class="submit-btn" style="background: var(--accent-blue);" onclick="copyNotice()">📋 복사하기</button>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ 구글 웹 앱 URL을 여기에 붙여넣으세요.
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwFifFn6BZhZtwtj1KfFvrDc42MnFMrGlMk60W-MFXqZeyLVo5nl8aug1m_6jso3fly/exec"; 
+    let selectedRes = "";
+    let selectedStory = null;
+    let selectedNotice = null;
+    let selectedMudeo = null;
+    let isPeakMode = false;
+    let isManualBailInput = false;
+
+    // 묻더 관련 벌금표 데이터
+    const mudeoData = {
+      'ATM': {
+        mudeo1: { baseMoney: 200000000, baseTime: 20, bailMoney: 210000000, bailTime: 10, bailPeak: 210500000, bailPeakTime: 5 },
+        mudeo2: { baseMoney: 300000000, baseTime: 30, bailMoney: 310000000, bailTime: 10, bailPeak: 312500000, bailPeakTime: 5 },
+        mudeo3: { baseMoney: 400000000, baseTime: 40, bailMoney: null, bailTime: null, bailPeak: null, bailPeakTime: null }
+      },
+      '편의점': {
+        mudeo1: { baseMoney: 200000000, baseTime: 30, bailMoney: 210000000, bailTime: 10, bailPeak: 212500000, bailPeakTime: 5 },
+        mudeo2: { baseMoney: 300000000, baseTime: 45, bailMoney: 310000000, bailTime: 10, bailPeak: 312500000, bailPeakTime: 5 },
+        mudeo3: { baseMoney: 400000000, baseTime: 60, bailMoney: null, bailTime: null, bailPeak: null, bailPeakTime: null }
+      },
+      '빈집 털이': {
+        mudeo1: { baseMoney: 200000000, baseTime: 30, bailMoney: 210000000, bailTime: 10, bailPeak: 212500000, bailPeakTime: 5 },
+        mudeo2: { baseMoney: 300000000, baseTime: 45, bailMoney: 310000000, bailTime: 10, bailPeak: 312500000, bailPeakTime: 5 },
+        mudeo3: { baseMoney: 400000000, baseTime: 60, bailMoney: null, bailTime: null, bailPeak: null, bailPeakTime: null }
+      },
+      '보석상': {
+        mudeo1: { baseMoney: 300000000, baseTime: 40, bailMoney: 310000000, bailTime: 10, bailPeak: 312500000, bailPeakTime: 5 },
+        mudeo2: { baseMoney: 450000000, baseTime: 60, bailMoney: 460000000, bailTime: 10, bailPeak: 462500000, bailPeakTime: 5 },
+        mudeo3: { baseMoney: 600000000, baseTime: 80, bailMoney: null, bailTime: null, bailPeak: null, bailPeakTime: null }
+      }
+    };
+
+    function handleStoryClick(element, storyType) {
+      const isApplicable = ['ATM', '편의점', '빈집 털이', '보석상'].includes(storyType);
+      const checkbox = element.querySelector('.calc-check');
+      
+      // 다른 스토리 체크 해제
+      document.querySelectorAll('#tab-story .calc-check').forEach(c => {
+        if(c !== checkbox) c.checked = false;
+      });
+      
+      // 체크박스 토글
+      checkbox.checked = !checkbox.checked;
+      
+      if(isApplicable && checkbox.checked) {
+        selectedStory = storyType;
+        selectedMudeo = null;
+        document.getElementById('mudeo-panel').style.display = 'block';
+        document.querySelectorAll('.mudeo-btn').forEach(btn => btn.classList.remove('mudeo-active'));
+      } else {
+        selectedStory = null;
+        selectedMudeo = null;
+        document.getElementById('mudeo-panel').style.display = 'none';
+      }
+      
+      // 기본 값으로 계산
+      calc();
+    }
+
+    function applyMudeo(mudeoType) {
+      if(!selectedStory) return alert("스토리를 선택하세요.");
+      
+      // 같은 버튼을 다시 클릭하면 기본값으로 복원
+      if(selectedMudeo === mudeoType) {
+        // 기본값으로 복원
+        const defaultValues = {
+          'ATM': { money: 100000000, time: 10 },
+          '편의점': { money: 100000000, time: 15 },
+          '빈집 털이': { money: 100000000, time: 15 },
+          '보석상': { money: 150000000, time: 20 }
+        };
+        
+        const storyCheckbox = Array.from(document.querySelectorAll('#tab-story .calc-check')).find(c => 
+          c.parentElement.innerText.includes(selectedStory)
+        );
+        
+        if(storyCheckbox && defaultValues[selectedStory]) {
+          storyCheckbox.dataset.money = defaultValues[selectedStory].money;
+          storyCheckbox.dataset.time = defaultValues[selectedStory].time;
+        }
+        
+        document.querySelectorAll('.mudeo-btn').forEach(btn => btn.classList.remove('mudeo-active'));
+        selectedMudeo = null;
+        document.getElementById('f-bail-time').value = 0;
+        isManualBailInput = false;
+        calc();
+        return;
+      }
+      
+      const data = mudeoData[selectedStory][mudeoType];
+      if(!data) return;
+
+      // 기존 체크박스 모두 해제
+      document.querySelectorAll('.calc-check').forEach(c => c.checked = false);
+      
+      // 스토리 항목 다시 체크
+      const storyCheckbox = Array.from(document.querySelectorAll('#tab-story .calc-check')).find(c => 
+        c.parentElement.innerText.includes(selectedStory)
+      );
+      if(storyCheckbox) storyCheckbox.checked = true;
+      
+      // 데이터 속성 업데이트
+      if(storyCheckbox) {
+        storyCheckbox.dataset.money = data.baseMoney;
+        storyCheckbox.dataset.time = data.baseTime;
+      }
+      
+      // 묻묻더(mudeo2), 묻묻묻더(mudeo3)는 보석금 감면 0으로 설정
+      if(mudeoType === 'mudeo2' || mudeoType === 'mudeo3') {
+        document.getElementById('f-bail-time').value = 0;
+        isManualBailInput = true;
+      } else {
+        isManualBailInput = false;
+      }
+      
+      // 보석금 옵션 업데이트 (선택 사항)
+      localStorage.setItem('mudeoType', mudeoType);
+      localStorage.setItem('mudeoMoney', data.baseMoney);
+      localStorage.setItem('mudeoTime', data.baseTime);
+      
+      // 현재 선택된 묻더 저장
+      selectedMudeo = mudeoType;
+      
+      // 버튼 활성화 표시
+      document.querySelectorAll('.mudeo-btn').forEach(btn => btn.classList.remove('mudeo-active'));
+      const buttonMap = { 'mudeo1': 'mudeo-btn-1', 'mudeo2': 'mudeo-btn-2', 'mudeo3': 'mudeo-btn-3' };
+      document.getElementById(buttonMap[mudeoType]).classList.add('mudeo-active');
+      
+      calc();
+    } 
+
+    function getNoticeTemplates() {
+        const name = localStorage.getItem('myName') || "미입력";
+        const uid = localStorage.getItem('myUid') || "미입력";
+        const inputName = document.getElementById('notice-name')?.value || name;
+        const inputUid = document.getElementById('notice-uid')?.value || uid;
+        const attendanceTime = getAttendanceTime();
+        const currentTime = getCurrentTime();
+        const attendanceTime30 = getAttendanceTime30();
+        
+        return {
+            "출석 공지": `/팩션공지 치즈 경찰청에서 안내드립니다. ${inputName}(${inputUid})님 ${attendanceTime} 까지 경찰청 사유지로 출석 바랍니다. - 치즈 경찰청 -`,
+            "수배 공지": `/팩션공지\n닉네임 : ${inputName}\n고유번호 : ${inputUid}\n현재시각: ${currentTime} ~ ${attendanceTime30} (30분)\n- 치즈 경찰청 -`,
+            "경털1차": `/팩션공지 치즈 경찰청에서 안내드립니다.\n남부 경찰청 서버실에서 강도 발생으로 서버실 위치로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "경털2차": `/팩션공지 치즈 경찰청에서 안내드립니다.\n217번지 경찰청에서 강도 발생으로 217번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다..\n\n- 치즈 경찰청 -`,
+            "697": `/팩션공지 치즈 경찰청에서 안내드립니다.\n697번지 보석상에서 강도 발생으로 697번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "575": `/팩션공지 치즈 경찰청에서 안내드립니다.\n575번지 남부은행에서 강도 발생으로 575번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "692": `/팩션공지 치즈 경찰청에서 안내드립니다.\n692번지 빈집에서 강도 발생으로 692번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "574": `/팩션공지 치즈 경찰청에서 안내드립니다.\n574번지 편의점에서 강도 발생으로 574번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "449": `/팩션공지 치즈 경찰청에서 안내드립니다.\n449번지 편의점에서 강도 발생으로 449번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "333": `/팩션공지 치즈 경찰청에서 안내드립니다.\n333번지 편의점에서 강도 발생으로 333번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "584": `/팩션공지 치즈 경찰청에서 안내드립니다.\n584번지 ATM에서 강도 발생으로 584번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+            "206": `/팩션공지 치즈 경찰청에서 안내드립니다.\n206번지 ATM에서 강도 발생으로 206번지로부터 2블럭 이내 접근 시 경고 없이 무통보 사살됨을 알려드립니다.\n\n- 치즈 경찰청 -`,
+        };
+    }
+
+    function getAttendanceTime() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 5);
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}시${minutes}분`;
+    }
+
+    function getAttendanceTime30() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 30);
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}시${minutes}분`;
+    }
+
+    function getCurrentTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}시${minutes}분`;
+    }
+
+    function renderNotices() {
+        const g = document.getElementById('notice-grid'); g.innerHTML = "";
+        const templates = getNoticeTemplates();
+        for(let k in templates) {
+            let b = document.createElement('div'); b.className='notice-btn'; b.innerText=k;
+            b.onclick=()=>{ 
+                document.querySelectorAll('.notice-btn').forEach(x=>x.classList.remove('selected')); 
+                b.classList.add('selected'); 
+                
+                // 현재 선택된 공지 저장
+                selectedNotice = k;
+                
+                // 출석 공지 또는 수배 공지일 때 입력칸 표시
+                const inputSection = document.getElementById('notice-input-section');
+                if(k === '출석 공지' || k === '수배 공지') {
+                    inputSection.style.display = 'block';
+                    document.getElementById('notice-uid').value = localStorage.getItem('myUid') || '';
+                    document.getElementById('notice-name').value = localStorage.getItem('myName') || '';
+                } else {
+                    inputSection.style.display = 'none';
+                }
+                
+                updateNoticePreview();
+            };
+            g.appendChild(b);
+        }
+    }
+
+    function updateNoticePreview() {
+        if(!selectedNotice) return;
+        const templates = getNoticeTemplates();
+        if(templates[selectedNotice]) {
+            document.getElementById('notice-preview').value = templates[selectedNotice];
+        }
+    }
+
+    function switchPage(id, btn) {
+        document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('calc-sticky-bar').style.display = (id === 'page-calc' ? 'flex' : 'none');
+    }
+
+    function updateSelectedItemsDisplay() {
+      let items = [];
+      document.querySelectorAll('.calc-check:checked').forEach(c => {
+        items.push(c.parentElement.innerText.split('$')[0].trim());
+      });
+      
+      const displayText = items.length > 0 ? items.join(', ') : '없음';
+      document.getElementById('selected-items-text').innerText = displayText;
+    }
+
+    function copySelectedItems() {
+      const text = document.getElementById('selected-items-text').innerText;
+      if(text === '없음') {
+        alert('선택된 죄목이 없습니다.');
+        return;
+      }
+
+      const fallbackCopy = () => {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(temp);
+        if(!ok) throw new Error('클립보드 복사 실패');
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+        .then(()=>alert("선택된 죄목이 복사되었습니다!"))
+        .catch(() => { fallbackCopy(); alert("선택된 죄목이 복사되었습니다!"); });
+      } else {
+        try { fallbackCopy(); alert("선택된 죄목이 복사되었습니다!"); }
+        catch(e) { alert("오류 발생: " + e.message); }
+      }
+    }
+
+    function calc() {
+      let baseMoney = 0, baseTime = 0;
+      document.querySelectorAll('.calc-check:checked').forEach(c => { baseMoney += parseInt(c.dataset.money, 10); baseTime += parseInt(c.dataset.time, 10); });
+
+      updateSelectedItemsDisplay();
+
+      let bailInput = parseInt(document.getElementById('f-bail-time').value, 10) || 0;
+      
+      // 피크 모드일 때 자동으로 보석금 감면 계산 (수동 입력이 아닐 때만)
+      if(isPeakMode && !isManualBailInput) {
+        // ATM 체크 여부 확인
+        const isATMChecked = Array.from(document.querySelectorAll('#tab-story .calc-check:checked')).some(c => 
+          c.parentElement.innerText.includes('ATM')
+        );
+        
+        if(isATMChecked && baseTime >= 10) {
+          // ATM은 0분으로 만들기 위해 전체 시간 감면
+          bailInput = baseTime;
+        } else if(baseTime > 5) {
+          // 다른 경우는 5분까지만 감면
+          bailInput = baseTime - 5;
+        }
+        document.getElementById('f-bail-time').value = bailInput;
+      }
+      
+      const bail = baseTime > 0 ? bailInput : 0; // 보석은 구금 시간이 있을 때만 적용
+
+      let money = baseMoney;
+      let time = baseTime;
+
+      if (bail > 0) {
+        money += bail * 500000;
+        time = Math.max(0, baseTime - bail);
+      }
+
+      if (baseTime >= 5) time = Math.max(5, time); else time = Math.max(0, time);
+      
+      // ATM이고 피크모드일 때는 0분 허용
+      if(isPeakMode && Array.from(document.querySelectorAll('#tab-story .calc-check:checked')).some(c => c.parentElement.innerText.includes('ATM'))) {
+        time = Math.max(0, baseTime - bail);
+      }
+
+      document.getElementById('disp-money').innerText = money.toLocaleString();
+      document.getElementById('disp-time').innerText = time;
+    }
+
+    function onBailInputChange() {
+      isManualBailInput = true;
+      calc();
+    }
+
+    function resetCalc() { 
+      document.querySelectorAll('.calc-check').forEach(c => c.checked = false); 
+      document.getElementById('f-bail-time').value = 0; 
+      isManualBailInput = false;
+      calc(); 
+    }
+
+    function togglePeakMode() {
+      isPeakMode = !isPeakMode;
+      isManualBailInput = false;
+      const btn = document.getElementById('c-peak-btn');
+      if(isPeakMode) {
+        btn.innerText = '⚡ 피크 ON';
+        btn.style.background = 'var(--accent-red)';
+        localStorage.setItem('isPeakMode', 'true');
+      } else {
+        btn.innerText = '⚡ 피크 OFF';
+        btn.style.background = 'var(--accent-green)';
+        localStorage.setItem('isPeakMode', 'false');
+        // 피크 OFF 시 보석금 감면 0으로 초기화
+        document.getElementById('f-bail-time').value = 0;
+      }
+      calc();
+    }
+
+    function openCalcTab(e, id) {
+        document.querySelectorAll('.calc-list').forEach(l => l.style.display = 'none');
+        document.getElementById(id).style.display = 'block';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+        e.currentTarget.classList.add('tab-active');
+        
+        // tab-story가 아닌 다른 탭으로 이동하면 mudeo-panel 숨기기
+        if(id !== 'tab-story') {
+          document.getElementById('mudeo-panel').style.display = 'none';
+          selectedStory = null;
+          selectedMudeo = null;
+          document.querySelectorAll('#tab-story .calc-check').forEach(c => c.checked = false);
+          calc();
+        } else {
+          // tab-story를 열 때만 mudeo-panel 초기화
+          document.getElementById('mudeo-panel').style.display = 'none';
+          selectedStory = null;
+          selectedMudeo = null;
+          document.querySelectorAll('#tab-story .calc-check').forEach(c => c.checked = false);
+          calc();
+        }
+    }
+
+    function syncMyInfo() {
+        const u = document.getElementById('c-uid').value, n = document.getElementById('c-name').value;
+        localStorage.setItem('myUid', u); localStorage.setItem('myName', n);
+        document.getElementById('r-uid').value = u; document.getElementById('r-name').value = n;
+        renderNotices();
+    }
+
+    function submitRp() {
+        const u = localStorage.getItem('myUid'), n = localStorage.getItem('myName');
+        const btn = document.getElementById('r-submit-btn');
+        if(!u || !n) return alert("본인 정보를 입력하세요.");
+        if(!selectedRes) return alert("승패 결과를 선택하세요.");
+
+        btn.disabled = true;
+        const originalText = btn.innerText;
+        btn.innerText = "⏳ 등록 중...";
+
+        let fd = new FormData();
+        fd.append("sheetType", "rp"); fd.append("uid", u); fd.append("userName", n);
+        fd.append("rpType", document.getElementById('r-type').value); fd.append("result", selectedRes);
+        
+        fetch(SCRIPT_URL, { method: 'POST', body: fd, mode: 'no-cors' })
+        .then(() => alert("✅ RP 기록 완료!"))
+        .catch(e => alert("오류 발생: " + e.message))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        });
+    }
+
+    function submitFine() {
+        const su = document.getElementById('f-sus-uid').value, sn = document.getElementById('f-sus-name').value;
+        const btn = document.getElementById('submit-fine-btn');
+        if(!su || !sn) return alert("범죄자 정보를 입력하세요.");
+
+        btn.disabled = true;
+        const originalText = btn.innerText;
+        btn.innerText = "⏳ 등록 중...";
+
+        let items = []; document.querySelectorAll('.calc-check:checked').forEach(c => items.push(c.parentElement.innerText.split('$')[0].trim()));
+        const bail = document.getElementById('f-bail-time').value; if(bail > 0) items.push(`보석금(${bail}분 감면)`);
+        
+        let fd = new FormData();
+        fd.append("sheetType", "fine"); fd.append("suspectUid", su); fd.append("suspectName", sn);
+        fd.append("policeUid", localStorage.getItem('myUid')); fd.append("policeName", localStorage.getItem('myName'));
+        fd.append("items", items.join(", ")); fd.append("totalFine", document.getElementById('disp-money').innerText); fd.append("totalTime", document.getElementById('disp-time').innerText);
+        
+        fetch(SCRIPT_URL, { method: 'POST', body: fd, mode: 'no-cors' })
+        .then(() => { 
+          alert("✅ 벌금 시트 등록 완료!"); 
+          resetCalc(); 
+          document.getElementById('f-sus-uid').value=""; 
+          document.getElementById('f-sus-name').value=""; 
+        })
+        .catch(e => alert("오류 발생: " + e.message))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        });
+    }
+
+    function handleCommute() {
+        const u = localStorage.getItem('myUid'), n = localStorage.getItem('myName');
+        const btn = document.getElementById('c-btn');
+        if(!u || !n) return alert("고번과 성함을 입력하세요.");
+        
+        const isWorking = localStorage.getItem('isWorking') === 'true';
+        const type = isWorking ? "퇴근" : "출근";
+        
+        btn.disabled = true;
+        btn.innerText = `⏳ ${type} 처리 중...`;
+
+        let fd = new FormData();
+        fd.append("sheetType", "commute"); fd.append("commuteAction", type); fd.append("uid", u); fd.append("userName", n);
+        
+        fetch(SCRIPT_URL, { method: 'POST', body: fd, mode: 'no-cors' })
+        .then(() => { 
+          localStorage.setItem('isWorking', !isWorking); 
+          alert(`✅ ${type} 완료!`); 
+          location.reload(); 
+        })
+        .catch(e => {
+          alert("오류 발생: " + e.message);
+            btn.disabled = false;
+            btn.innerText = isWorking ? "🏠 퇴근하기" : "🏢 출근하기";
+        });
+    }
+
+    function resetAllData() {
+        if(confirm("정말로 모든 사용자 설정(이름, 고번, 근무 상태 등)을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) {
+            localStorage.clear();
+            alert("모든 설정이 초기화되었습니다.");
+            location.reload();
+        }
+    }
+
+    function setResult(v) { 
+      selectedRes = v; 
+      document.getElementById('box-win').className = (v==='승리'?'radio-box active-win':'radio-box'); 
+      document.getElementById('box-draw').className = (v==='무승부'?'radio-box active-draw':'radio-box'); 
+      document.getElementById('box-lose').className = (v==='패배'?'radio-box active-lose':'radio-box'); 
+    }
+    function toggleTheme() { const isD = document.body.getAttribute('data-theme') === 'dark'; document.body.setAttribute('data-theme', isD ? 'light' : 'dark'); localStorage.setItem('theme', isD ? 'light' : 'dark'); }
+    function copyNotice() {
+      const text = document.getElementById('notice-preview').value;
+
+      const fallbackCopy = () => {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(temp);
+        if(!ok) throw new Error('클립보드 복사 실패');
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+        .then(()=>alert("복사완료"))
+        .catch(() => { fallbackCopy(); alert("복사완료"); });
+      } else {
+        try { fallbackCopy(); alert("복사완료"); }
+        catch(e) { alert("오류 발생: " + e.message); }
+      }
+    }
+    
+    window.onload = () => {
+        const u = localStorage.getItem('myUid') || "", n = localStorage.getItem('myName') || "";
+        document.getElementById('c-uid').value = u; document.getElementById('c-name').value = n;
+        if(localStorage.getItem('isWorking') === 'true') { document.getElementById('c-btn').innerText = "🏠 퇴근하기"; document.getElementById('c-btn').className = "commute-btn btn-off"; }
+        
+        // 피크 모드 상태 복원
+        if(localStorage.getItem('isPeakMode') === 'true') {
+          isPeakMode = true;
+          const btn = document.getElementById('c-peak-btn');
+          btn.innerText = '⚡ 피크 ON';
+          btn.style.background = 'var(--accent-red)';
+        }
+        
+        if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme', 'dark');
+        syncMyInfo();
+        switchPage('page-record', document.querySelector('.nav-btn'));
+    };
+  </script>
+</body>
+</html>
